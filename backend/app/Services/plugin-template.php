@@ -1,0 +1,158 @@
+<?php
+/**
+ * Plugin Name: WP Migrator Helper
+ * Description: Temporary migration helper. Auto-removes after migration.
+ * Version: 1.0
+ */
+if (!defined('ABSPATH')) exit;
+
+function wpm_check_auth() {
+    if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized', 403);
+}
+
+add_action('wp_ajax_wpm_get_nonce', function() {
+    wpm_check_auth();
+    wp_send_json_success(wp_create_nonce('wpm_nonce'));
+});
+
+add_action('wp_ajax_wpm_create_backup', function() {
+    wpm_check_auth();
+    @set_time_limit(600);
+    @ini_set('memory_limit', '512M');
+
+    if (!class_exists('ZipArchive')) wp_send_json_error('ZipArchive not available on this server');
+
+    $upload_dir = wp_upload_dir();
+    if (!empty($upload_dir['error'])) wp_send_json_error('Upload dir error: ' . $upload_dir['error']);
+
+    $backup_dir = $upload_dir['basedir'] . '/wpm-backups';
+    if (!wp_mkdir_p($backup_dir)) wp_send_json_error('Cannot create backup dir: ' . $backup_dir);
+    file_put_contents($backup_dir . '/.htaccess', 'deny from all');
+
+    $job_id   = sanitize_text_field($_POST['job_id'] ?? uniqid());
+    $zip_name = 'wpm-backup-' . $job_id . '.zip';
+    $zip_path = $backup_dir . '/' . $zip_name;
+
+    $zip = new ZipArchive();
+    $r   = $zip->open($zip_path, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+    if ($r !== true) wp_send_json_error('Cannot open zip, code: ' . $r);
+
+    $db_file = $backup_dir . '/database.sql';
+    wpm_export_db($db_file);
+    $zip->addFile($db_file, 'database.sql');
+
+    $base_len = strlen(ABSPATH) - 1;
+    $skip     = ['wpm-backups', 'cache', '.git', 'node_modules'];
+    $it = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator(WP_CONTENT_DIR, RecursiveDirectoryIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::SELF_FIRST
+    );
+    foreach ($it as $f) {
+        $sk = false;
+        foreach ($skip as $p) { if (strpos($f->getPathname(), $p) !== false) { $sk = true; break; } }
+        if ($sk) continue;
+        $rel = substr($f->getPathname(), $base_len);
+        if ($f->isDir()) $zip->addEmptyDir($rel); else $zip->addFile($f->getPathname(), $rel);
+    }
+
+    if (file_exists(ABSPATH . 'wp-config.php')) $zip->addFile(ABSPATH . 'wp-config.php', 'wp-config.php');
+    $zip->addFromString('wpm-info.json', json_encode([
+        'siteurl'    => get_option('siteurl'),
+        'home'       => get_option('home'),
+        'created_at' => date('Y-m-d H:i:s'),
+    ]));
+    $zip->close();
+    @unlink($db_file);
+
+    wp_send_json_success([
+        'file' => $zip_name,
+        'url'  => $upload_dir['baseurl'] . '/wpm-backups/' . $zip_name,
+        'size' => filesize($zip_path),
+    ]);
+});
+
+function wpm_export_db($out) {
+    global $wpdb;
+    $tables = $wpdb->get_col('SHOW TABLES');
+    $sql    = "SET FOREIGN_KEY_CHECKS=0;\n\n";
+    foreach ($tables as $t) {
+        $c    = $wpdb->get_row("SHOW CREATE TABLE `{$t}`", ARRAY_N);
+        $sql .= "DROP TABLE IF EXISTS `{$t}`;\n" . $c[1] . ";\n\n";
+        $rows = $wpdb->get_results("SELECT * FROM `{$t}`", ARRAY_A);
+        foreach ($rows as $row) {
+            $vals = array_map(function($v) { return $v === null ? 'NULL' : "'".addslashes($v)."'"; }, $row);
+            $sql .= "INSERT INTO `{$t}` VALUES (" . implode(',', $vals) . ");\n";
+        }
+        $sql .= "\n";
+    }
+    $sql .= "SET FOREIGN_KEY_CHECKS=1;\n";
+    file_put_contents($out, $sql);
+}
+
+add_action('wp_ajax_wpm_restore_backup', function() {
+    wpm_check_auth();
+    @set_time_limit(600);
+    @ini_set('memory_limit', '512M');
+    if (empty($_FILES['backup'])) wp_send_json_error('No backup file');
+    $old = $_POST['old_domain'] ?? '';
+    $new = $_POST['new_domain'] ?? '';
+    $ud  = wp_upload_dir();
+    $dir = $ud['basedir'] . '/wpm-restore-' . time();
+    wp_mkdir_p($dir);
+    $zp = $dir . '/backup.zip';
+    move_uploaded_file($_FILES['backup']['tmp_name'], $zp);
+    $zip = new ZipArchive();
+    if ($zip->open($zp) !== true) wp_send_json_error('Cannot open backup zip');
+    $zip->extractTo($dir);
+    $zip->close();
+    $wc = $dir . '/wp-content';
+    if (is_dir($wc)) wpm_copy_dir($wc, WP_CONTENT_DIR);
+    $db = $dir . '/database.sql';
+    if (file_exists($db)) wpm_import_db($db, $old, $new);
+    if ($old && $new && $old !== $new) {
+        update_option('siteurl', str_replace($old, $new, get_option('siteurl')));
+        update_option('home',    str_replace($old, $new, get_option('home')));
+    }
+    wpm_rrmdir($dir);
+    wp_send_json_success(['message' => 'Restore completed']);
+});
+
+function wpm_import_db($f, $old, $new) {
+    global $wpdb;
+    $sql = file_get_contents($f);
+    if ($old && $new) $sql = str_replace($old, $new, $sql);
+    $wpdb->query('SET FOREIGN_KEY_CHECKS=0');
+    foreach (preg_split('/;\s*\n/', $sql) as $s) { $s = trim($s); if ($s) $wpdb->query($s); }
+    $wpdb->query('SET FOREIGN_KEY_CHECKS=1');
+}
+
+function wpm_copy_dir($src, $dst) {
+    @mkdir($dst, 0755, true);
+    $d = opendir($src);
+    while (($f = readdir($d)) !== false) {
+        if ($f === '.' || $f === '..') continue;
+        $s = $src.'/'.$f; $dt = $dst.'/'.$f;
+        if (is_dir($s)) wpm_copy_dir($s, $dt); else copy($s, $dt);
+    }
+    closedir($d);
+}
+
+function wpm_rrmdir($dir) {
+    if (!is_dir($dir)) return;
+    $it = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::CHILD_FIRST
+    );
+    foreach ($it as $i) { $i->isDir() ? rmdir($i->getPathname()) : unlink($i->getPathname()); }
+    rmdir($dir);
+}
+
+add_action('wp_ajax_wpm_cleanup', function() {
+    wpm_check_auth();
+    $ud = wp_upload_dir();
+    $bd = $ud['basedir'] . '/wpm-backups';
+    if (is_dir($bd)) array_map('unlink', glob($bd . '/wpm-backup-*.zip'));
+    deactivate_plugins(plugin_basename(__FILE__));
+    delete_plugins([plugin_basename(__FILE__)]);
+    wp_send_json_success('Cleaned up');
+});

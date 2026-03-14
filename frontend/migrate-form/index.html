@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>WP Migrator Pro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:     #f0f4f8;
+  --white:  #ffffff;
+  --src:    #1a4fa0;
+  --src-lt: #e8f0fd;
+  --dst:    #0d7a55;
+  --dst-lt: #e6f5f0;
+  --border: #d0d9e6;
+  --text:   #1a202c;
+  --muted:  #64748b;
+  --danger: #dc2626;
+  --ok:     #16a34a;
+  --warn:   #d97706;
+  --radius: 10px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:var(--bg); font-family:'DM Sans',sans-serif; color:var(--text); min-height:100vh; }
+
+/* Topbar */
+.topbar { background:var(--white); border-bottom:2px solid var(--border); padding:0 2rem; display:flex; align-items:center; justify-content:space-between; height:56px; position:sticky; top:0; z-index:100; box-shadow:0 1px 4px rgba(0,0,0,.06); }
+.logo { display:flex; align-items:center; gap:.6rem; font-weight:800; font-size:1.1rem; color:var(--text); text-decoration:none; }
+.logo-icon { width:32px; height:32px; background:linear-gradient(135deg,var(--src),var(--dst)); border-radius:8px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1rem; }
+.topnav a { padding:.4rem .9rem; border-radius:6px; text-decoration:none; font-size:.85rem; font-weight:500; color:var(--muted); }
+.topnav a:hover, .topnav a.active { background:var(--src-lt); color:var(--src); }
+
+/* Hero */
+.hero { text-align:center; padding:2rem 1rem 1.5rem; }
+.hero h1 { font-size:1.8rem; font-weight:800; letter-spacing:-.03em; }
+.hero p { color:var(--muted); font-size:.9rem; margin-top:.4rem; }
+
+/* Layout */
+.layout { max-width:1100px; margin:0 auto; padding:0 1.5rem 3rem; }
+
+/* Panels */
+.panels { display:flex; gap:1.5rem; align-items:flex-start; margin-bottom:1rem; }
+.panel { flex:1; background:var(--white); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
+.panel-head { padding:.85rem 1.25rem; font-weight:700; font-size:.95rem; display:flex; align-items:center; gap:.5rem; }
+.panel-src .panel-head { background:var(--src); color:#fff; }
+.panel-dst .panel-head { background:var(--dst); color:#fff; }
+.panel-body { padding:1.25rem; display:flex; flex-direction:column; gap:1rem; }
+
+/* Fields */
+.field label { display:block; font-size:.72rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-bottom:.35rem; }
+.field-row { display:flex; align-items:center; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; background:var(--white); }
+.field-row:focus-within { border-color:var(--src); }
+.field-icon { padding:0 .75rem; font-size:1rem; opacity:.6; }
+.field-row input { flex:1; border:none; outline:none; padding:.65rem .5rem; font-size:.9rem; font-family:inherit; background:transparent; }
+.show-pass { background:none; border:none; cursor:pointer; padding:0 .6rem; color:var(--muted); font-size:.8rem; font-family:'IBM Plex Mono',monospace; white-space:nowrap; }
+.show-pass:hover { color:var(--text); }
+
+/* Middle swap */
+.middle { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.75rem; padding-top:3rem; flex-shrink:0; }
+.arrow-wrap { display:flex; align-items:center; gap:4px; }
+.arrow-line { width:40px; height:2px; background:var(--border); }
+.arrow-head { font-size:1.3rem; color:var(--src); }
+.swap-btn { background:var(--white); border:1.5px solid var(--border); border-radius:50%; width:40px; height:40px; cursor:pointer; font-size:1.1rem; display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow); }
+.swap-btn:hover { border-color:var(--src); color:var(--src); }
+
+/* Plugin guide */
+.plugin-guide { background:var(--white); border:2px solid var(--border); border-radius:var(--radius); padding:1.25rem 1.5rem; margin-bottom:1rem; }
+.pg-header { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:1rem; }
+.pg-icon { font-size:1.8rem; }
+.pg-title { font-weight:700; font-size:1rem; }
+.pg-sub { font-size:.8rem; color:var(--muted); margin-top:.15rem; }
+.btn-dl { margin-left:auto; background:var(--src); color:#fff; border:none; border-radius:8px; padding:.55rem 1.1rem; font-size:.85rem; font-weight:600; cursor:pointer; text-decoration:none; white-space:nowrap; }
+.btn-dl:hover { opacity:.88; }
+.pg-steps { display:flex; gap:.6rem; flex-wrap:wrap; margin-bottom:1rem; }
+.pg-step { display:flex; align-items:center; gap:.5rem; background:var(--bg); border-radius:8px; padding:.5rem .75rem; font-size:.82rem; flex:1; min-width:180px; }
+.pg-num { background:var(--src); color:#fff; border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:700; flex-shrink:0; }
+.pg-check-row { display:flex; gap:1rem; flex-wrap:wrap; border-top:1px solid var(--border); padding-top:.9rem; }
+.pg-check-item { display:flex; align-items:center; gap:.6rem; flex:1; min-width:220px; font-size:.85rem; }
+.btn-check { margin-left:auto; background:none; border:1.5px solid var(--border); border-radius:6px; padding:.3rem .75rem; font-size:.78rem; cursor:pointer; font-weight:600; color:var(--muted); }
+.btn-check:hover { border-color:var(--src); color:var(--src); }
+
+/* Options */
+.options-bar { display:flex; gap:1.5rem; flex-wrap:wrap; background:var(--white); border-radius:var(--radius); padding:.9rem 1.25rem; margin-bottom:.75rem; box-shadow:var(--shadow); }
+.option-check { display:flex; align-items:center; gap:.5rem; font-size:.875rem; cursor:pointer; }
+.option-check input { width:16px; height:16px; cursor:pointer; accent-color:var(--src); }
+
+/* Warning */
+.warning { background:#fffbeb; border:1.5px solid #fcd34d; border-radius:var(--radius); padding:.85rem 1.1rem; display:flex; align-items:flex-start; gap:.65rem; font-size:.85rem; margin-bottom:.75rem; }
+.warning-icon { font-size:1.1rem; flex-shrink:0; }
+
+/* Actions */
+.actions { display:flex; gap:.75rem; margin-bottom:1rem; }
+.btn-sync { flex:2; background:linear-gradient(135deg,#1a4fa0,#0d7a55); color:#fff; border:none; border-radius:var(--radius); padding:1.1rem; font-size:1.1rem; font-weight:800; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:.2rem; }
+.btn-sync:hover:not(:disabled) { opacity:.92; }
+.btn-sync:disabled { opacity:.5; cursor:not-allowed; }
+.btn-abort { flex:1; background:#fff; border:2px solid #d1d5db; border-radius:var(--radius); padding:1.1rem; font-size:1rem; font-weight:700; cursor:pointer; color:#6b7280; }
+.btn-abort:hover:not(:disabled) { border-color:var(--danger); color:var(--danger); }
+.btn-abort:disabled { opacity:.4; cursor:not-allowed; }
+.btn-sub { font-size:.72rem; font-weight:400; opacity:.8; }
+
+/* Progress */
+.progress-area { background:var(--white); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
+.progress-eta { display:flex; justify-content:space-between; align-items:center; padding:.75rem 1.25rem; border-bottom:1px solid var(--border); font-size:.85rem; }
+.eta-label { color:var(--muted); font-family:'IBM Plex Mono',monospace; font-size:.75rem; }
+.eta-val { font-weight:600; }
+.progress-track { height:5px; background:var(--bg); }
+.progress-fill { height:100%; background:linear-gradient(90deg,var(--src),var(--dst)); transition:width .4s ease; }
+.progress-steps { display:flex; border-bottom:1px solid var(--border); }
+.pstep { flex:1; display:flex; flex-direction:column; align-items:center; gap:.3rem; padding:.85rem .5rem; font-size:.78rem; color:var(--muted); border-right:1px solid var(--border); transition:all .2s; }
+.pstep:last-child { border-right:none; }
+.pstep-icon { font-size:1.3rem; }
+.pstep.active { background:var(--src-lt); color:var(--src); font-weight:700; }
+.pstep.done   { color:var(--ok); }
+.pstep.error  { color:var(--danger); }
+.log-area { border-top:1px solid var(--border); }
+.log-head { padding:.5rem 1rem; font-family:'IBM Plex Mono',monospace; font-size:.75rem; color:var(--muted); background:var(--bg); border-bottom:1px solid var(--border); }
+.log-body { padding:.75rem 1rem; font-family:'IBM Plex Mono',monospace; font-size:.75rem; line-height:1.7; max-height:280px; overflow-y:auto; }
+.log-line      { color:#334155; }
+.log-line.ok   { color:var(--ok); }
+.log-line.err  { color:var(--danger); }
+
+/* Toast */
+.toast { position:fixed; bottom:1.5rem; left:50%; transform:translateX(-50%) translateY(20px); background:#1e293b; color:#fff; padding:.7rem 1.4rem; border-radius:8px; font-size:.875rem; font-weight:600; opacity:0; transition:all .3s; pointer-events:none; z-index:999; white-space:nowrap; }
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+.toast.err  { background:var(--danger); }
+
+@media(max-width:768px) { .panels { flex-direction:column; } .middle { flex-direction:row; padding-top:0; } }
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="/dashboard" class="logo"><div class="logo-icon">⚡</div> WP Migrator Pro</a>
+  <div class="topnav">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/migrate" class="active">Migrate</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <h1>WP Migrator Pro</h1>
+  <p>Nhân bản <strong>toàn bộ</strong> WordPress sang hosting mới — không cần biết server, không cần SSH.</p>
+</div>
+
+<div class="layout">
+
+  <!-- Panels -->
+  <div class="panels">
+    <div class="panel panel-src">
+      <div class="panel-head"><span>🌐</span> WordPress Nguồn (Source)</div>
+      <div class="panel-body">
+        <div class="field">
+          <label>URL Website (chỉ domain, không cần /wp-admin)</label>
+          <div class="field-row">
+            <div class="field-icon">🔗</div>
+            <input id="src-url" type="url" placeholder="https://site-nguon.com" autocomplete="off"/>
+          </div>
+        </div>
+        <div class="field">
+          <label>Tài khoản Admin WP</label>
+          <div class="field-row">
+            <div class="field-icon">👤</div>
+            <input id="src-user" placeholder="admin" autocomplete="off"/>
+          </div>
+        </div>
+        <div class="field">
+          <label>Mật khẩu Admin WP</label>
+          <div class="field-row">
+            <div class="field-icon">🔒</div>
+            <input id="src-pass" type="password" placeholder="••••••••" autocomplete="new-password"/>
+            <button class="show-pass" onclick="togglePass('src-pass',this)">hiện</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="middle">
+      <div class="arrow-wrap">
+        <div class="arrow-line"></div>
+        <div class="arrow-head">→</div>
+        <div class="arrow-line"></div>
+      </div>
+      <button class="swap-btn" id="swap-btn" title="Đổi nguồn ⇄ đích">⇄</button>
+    </div>
+
+    <div class="panel panel-dst">
+      <div class="panel-head"><span>🎯</span> WordPress Đích (Destination)</div>
+      <div class="panel-body">
+        <div class="field">
+          <label>URL Website (chỉ domain, không cần /wp-admin)</label>
+          <div class="field-row">
+            <div class="field-icon">🔗</div>
+            <input id="dst-url" type="url" placeholder="https://site-moi.com" autocomplete="off"/>
+          </div>
+        </div>
+        <div class="field">
+          <label>Tài khoản Admin WP</label>
+          <div class="field-row">
+            <div class="field-icon">👤</div>
+            <input id="dst-user" placeholder="admin" autocomplete="off"/>
+          </div>
+        </div>
+        <div class="field">
+          <label>Mật khẩu Admin WP</label>
+          <div class="field-row">
+            <div class="field-icon">🔒</div>
+            <input id="dst-pass" type="password" placeholder="••••••••" autocomplete="new-password"/>
+            <button class="show-pass" onclick="togglePass('dst-pass',this)">hiện</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Options -->
+  <div class="options-bar">
+    <label class="option-check"><input type="checkbox" id="opt-verbose" checked/><span>Hiển thị log chi tiết</span></label>
+    <label class="option-check"><input type="checkbox" id="opt-dryrun"/><span>Chỉ kiểm tra kết nối (không migrate thật)</span></label>
+    <label class="option-check"><input type="checkbox" id="opt-dbonly"/><span>Chỉ migrate Database</span></label>
+  </div>
+
+  <!-- Warning -->
+  <div class="warning">
+    <span class="warning-icon">⚠️</span>
+    <div>Nếu bạn <strong>đóng tab này</strong> trong lúc đang migrate, quá trình sẽ bị <strong>hủy</strong>.</div>
+  </div>
+
+  <!-- Actions -->
+  <div class="actions">
+    <button class="btn-sync" id="sync-btn">
+      ✉ → ✉ &nbsp; Sync / Migrate!
+      <span class="btn-sub">nhân bản toàn bộ WordPress</span>
+    </button>
+    <button class="btn-abort" id="abort-btn" disabled>
+      ✕ &nbsp; Abort!
+      <span class="btn-sub">hủy quá trình</span>
+    </button>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-area" id="progress-area">
+    <div class="progress-eta">
+      <span class="eta-label">ETA: Estimation Time of Arrival</span>
+      <span class="eta-val" id="eta-msg">Sẵn sàng</span>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progress-bar" style="width:0%"></div></div>
+    <div class="progress-steps">
+      <div class="pstep" id="ps-login"><span class="pstep-icon">🔑</span><span class="pstep-name">Login</span></div>
+      <div class="pstep" id="ps-plugin"><span class="pstep-icon">🔧</span><span class="pstep-name">Plugin</span></div>
+      <div class="pstep" id="ps-backup"><span class="pstep-icon">💾</span><span class="pstep-name">Backup</span></div>
+      <div class="pstep" id="ps-restore"><span class="pstep-icon">📦</span><span class="pstep-name">Restore</span></div>
+      <div class="pstep" id="ps-cleanup"><span class="pstep-icon">✅</span><span class="pstep-name">Done</span></div>
+    </div>
+    <div class="log-area" id="log-area" style="display:none">
+      <div class="log-head">// LIVE OUTPUT</div>
+      <div class="log-body" id="log-body"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+let jobId   = null;
+let polling = null;
+
+// ── Utils ──────────────────────────────────────────────────────────────────
+
+function togglePass(id, btn) {
+  const el = document.getElementById(id);
+  el.type = el.type === 'password' ? 'text' : 'password';
+  btn.textContent = el.type === 'password' ? 'hiện' : 'ẩn';
+}
+
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (type === 'err' ? ' err' : '') + ' show';
+  setTimeout(() => t.classList.remove('show'), 4500);
+}
+
+// ── Swap ───────────────────────────────────────────────────────────────────
+
+document.getElementById('swap-btn').addEventListener('click', function() {
+  var fields = ['url','user','pass'];
+  fields.forEach(function(f) {
+    var a = document.getElementById('src-' + f);
+    var b = document.getElementById('dst-' + f);
+    var tmp = a.value; a.value = b.value; b.value = tmp;
+  });
+});
+
+// ── Steps ──────────────────────────────────────────────────────────────────
+
+var stepMap   = { login:'ps-login', plugin:'ps-plugin', backup:'ps-backup', download:'ps-backup', restore:'ps-restore', cleanup:'ps-cleanup', done:'ps-cleanup' };
+var stepOrder = ['ps-login','ps-plugin','ps-backup','ps-restore','ps-cleanup'];
+
+function highlightSteps(step, status) {
+  var cur = stepMap[step] || '';
+  var idx = stepOrder.indexOf(cur);
+  stepOrder.forEach(function(id, i) {
+    var el = document.getElementById(id);
+    el.classList.remove('active','done','error');
+    if (status === 'done') { el.classList.add('done'); }
+    else if (status === 'error' && id === cur) { el.classList.add('error'); }
+    else if (i < idx) { el.classList.add('done'); }
+    else if (id === cur) { el.classList.add('active'); }
+  });
+}
+
+// ── Polling ────────────────────────────────────────────────────────────────
+
+function startPolling() {
+  polling = setInterval(function() {
+    Promise.all([
+      fetch('/api/migrate/progress/' + jobId).then(function(r) { return r.json(); }),
+      fetch('/api/migrate/logs/'     + jobId).then(function(r) { return r.json(); }),
+    ]).then(function(results) {
+      var pr = results[0];
+      var lr = results[1];
+
+      document.getElementById('progress-bar').style.width = (pr.percent || 0) + '%';
+      document.getElementById('eta-msg').textContent = pr.message || '...';
+      highlightSteps(pr.step, pr.status);
+
+      if (lr.logs && lr.logs.length && document.getElementById('opt-verbose').checked) {
+        var body = document.getElementById('log-body');
+        body.innerHTML = lr.logs.map(function(l) {
+          var cls = l.includes('[ERROR]') ? 'err' : (l.includes('[DONE]') || l.includes('✓')) ? 'ok' : '';
+          return '<div class="log-line ' + cls + '">' + l.replace(/</g,'&lt;') + '</div>';
+        }).join('');
+        body.scrollTop = body.scrollHeight;
+      }
+
+      if (['done','error','aborted'].includes(pr.status)) {
+        clearInterval(polling); polling = null;
+        reset();
+        document.getElementById('abort-btn').disabled = true;
+        if (pr.status === 'done') {
+          toast('🎉 Migration hoàn tất!');
+        } else {
+          toast('Migration ' + pr.status + ': ' + pr.message, 'err');
+        }
+      }
+    }).catch(function() {});
+  }, 2000);
+}
+
+function reset() {
+  document.getElementById('sync-btn').disabled = false;
+}
+
+// ── Start Migration ────────────────────────────────────────────────────────
+
+async function startMigration() {
+  var data = {
+    src_url:  document.getElementById('src-url').value.trim(),
+    src_user: document.getElementById('src-user').value.trim(),
+    src_pass: document.getElementById('src-pass').value,
+    dst_url:  document.getElementById('dst-url').value.trim(),
+    dst_user: document.getElementById('dst-user').value.trim(),
+    dst_pass: document.getElementById('dst-pass').value,
+    dry_run:  document.getElementById('opt-dryrun').checked,
+    db_only:  document.getElementById('opt-dbonly').checked,
+  };
+
+  if (!data.src_url || !data.src_user || !data.src_pass) {
+    toast('Vui lòng điền đầy đủ thông tin Source', 'err'); return;
+  }
+  if (!data.dst_url || !data.dst_user || !data.dst_pass) {
+    toast('Vui lòng điền đầy đủ thông tin Destination', 'err'); return;
+  }
+
+  document.getElementById('sync-btn').disabled  = true;
+  document.getElementById('abort-btn').disabled = false;
+  document.getElementById('log-area').style.display = 'block';
+  document.getElementById('log-body').innerHTML = '';
+
+  try {
+    var res  = await fetch('/api/migrate/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    var result = await res.json();
+    if (!result.success) { toast('Lỗi: ' + (result.error || 'Unknown'), 'err'); reset(); return; }
+    jobId = result.job_id;
+    toast('✓ Bắt đầu migrate — Job: ' + jobId);
+    startPolling();
+  } catch(e) {
+    toast('Không kết nối được server', 'err');
+    reset();
+  }
+}
+
+document.getElementById('sync-btn').addEventListener('click', startMigration);
+
+document.getElementById('abort-btn').addEventListener('click', async function() {
+  if (!jobId) return;
+  await fetch('/api/migrate/abort/' + jobId, { method: 'POST' });
+  if (polling) { clearInterval(polling); polling = null; }
+  document.getElementById('abort-btn').disabled = true;
+  reset();
+  toast('Đã hủy migration', 'err');
+});
+</script>
+</body>
+</html>

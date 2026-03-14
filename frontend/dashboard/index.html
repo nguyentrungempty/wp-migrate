@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>WP Migrator Pro — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:#f0f4f8; --white:#fff; --src:#1a4fa0; --src-lt:#e8f0fd;
+  --dst:#0d7a55; --dst-lt:#e6f5f0; --border:#d0d9e6;
+  --text:#1a202c; --muted:#64748b; --danger:#dc2626;
+  --success:#16a34a; --warn:#d97706; --radius:10px;
+  --shadow:0 2px 12px rgba(0,0,0,0.08);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);font-family:'DM Sans',sans-serif;color:var(--text);min-height:100vh;}
+.topbar{background:var(--white);border-bottom:2px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.logo{display:flex;align-items:center;gap:0.6rem;font-weight:800;font-size:1.1rem;color:var(--text);text-decoration:none;}
+.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--src),var(--dst));border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1rem;}
+.topnav{display:flex;gap:0.25rem;}
+.topnav a{padding:0.4rem 0.9rem;border-radius:6px;text-decoration:none;font-size:0.85rem;font-weight:500;color:var(--muted);transition:all 0.15s;}
+.topnav a:hover,.topnav a.active{background:var(--src-lt);color:var(--src);}
+
+.layout{max-width:1100px;margin:0 auto;padding:2rem 1.5rem;}
+.page-title{font-size:1.6rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:1.5rem;}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.75rem;}
+.stat{background:var(--white);border:1.5px solid var(--border);border-radius:var(--radius);padding:1.25rem;position:relative;overflow:hidden;}
+.stat::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.stat-total::before{background:linear-gradient(90deg,var(--src),var(--dst));}
+.stat-done::before{background:var(--success);}
+.stat-running::before{background:var(--warn);}
+.stat-fail::before{background:var(--danger);}
+.stat-label{font-size:0.7rem;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:0.6rem;}
+.stat-val{font-size:2rem;font-weight:800;line-height:1;}
+.stat-done .stat-val{color:var(--success);}
+.stat-running .stat-val{color:var(--warn);}
+.stat-fail .stat-val{color:var(--danger);}
+.stat-sub{font-size:0.72rem;color:var(--muted);margin-top:0.3rem;font-family:'IBM Plex Mono',monospace;}
+
+.card{background:var(--white);border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);}
+.card-head{padding:1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.card-title{font-weight:700;font-size:0.95rem;}
+.btn-new{background:var(--src);color:#fff;text-decoration:none;padding:0.45rem 1rem;border-radius:7px;font-size:0.8rem;font-weight:700;display:inline-flex;align-items:center;gap:0.35rem;transition:background 0.15s;}
+.btn-new:hover{background:#1541a0;}
+table{width:100%;border-collapse:collapse;}
+th{text-align:left;font-size:0.68rem;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);padding:0.75rem 1rem;border-bottom:1px solid var(--border);background:#fafbfc;}
+td{padding:0.9rem 1rem;border-bottom:1px solid #f1f5f9;font-size:0.85rem;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#f8faff;}
+.mono{font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--muted);}
+.badge{display:inline-flex;align-items:center;gap:0.3rem;padding:0.2rem 0.65rem;border-radius:999px;font-size:0.68rem;font-family:'IBM Plex Mono',monospace;font-weight:600;}
+.badge::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;}
+.badge-done{background:#f0fdf4;color:var(--success);}
+.badge-running{background:#eff6ff;color:var(--src);}
+.badge-running::before{animation:pulse 1.2s infinite;}
+.badge-error{background:#fef2f2;color:var(--danger);}
+.badge-aborted{background:#f1f5f9;color:var(--muted);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.prog-mini{height:4px;background:#e2e8f0;border-radius:2px;width:100px;overflow:hidden;}
+.prog-mini-fill{height:100%;background:linear-gradient(90deg,var(--src),var(--dst));border-radius:2px;transition:width 0.4s;}
+.btn-view{background:none;border:1.5px solid var(--border);color:var(--muted);padding:0.3rem 0.75rem;border-radius:6px;font-size:0.75rem;cursor:pointer;text-decoration:none;font-family:'DM Sans',sans-serif;transition:all 0.15s;}
+.btn-view:hover{border-color:var(--src);color:var(--src);}
+.empty{text-align:center;padding:3rem;color:var(--muted);font-size:0.9rem;}
+.empty a{color:var(--src);text-decoration:none;font-weight:600;}
+@media(max-width:700px){.stats{grid-template-columns:repeat(2,1fr);}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a class="logo" href="/dashboard">
+    <div class="logo-icon">⚡</div>
+    WP Migrator Pro
+  </a>
+  <nav class="topnav">
+    <a href="/dashboard" class="active">Dashboard</a>
+    <a href="/migrate">Migrate</a>
+  </nav>
+</div>
+
+<div class="layout">
+  <div class="page-title">Dashboard</div>
+
+  <div class="stats">
+    <div class="stat stat-total">
+      <div class="stat-label">Tổng jobs</div>
+      <div class="stat-val" id="s-total">—</div>
+      <div class="stat-sub">all time</div>
+    </div>
+    <div class="stat stat-done">
+      <div class="stat-label">Thành công</div>
+      <div class="stat-val" id="s-done">—</div>
+      <div class="stat-sub">completed</div>
+    </div>
+    <div class="stat stat-running">
+      <div class="stat-label">Đang chạy</div>
+      <div class="stat-val" id="s-run">—</div>
+      <div class="stat-sub">in progress</div>
+    </div>
+    <div class="stat stat-fail">
+      <div class="stat-label">Thất bại</div>
+      <div class="stat-val" id="s-fail">—</div>
+      <div class="stat-sub">error / aborted</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">Lịch sử Migration</div>
+      <a class="btn-new" href="/migrate">＋ Migration mới</a>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Job ID</th>
+          <th>Bắt đầu</th>
+          <th>Bước</th>
+          <th>Tiến độ</th>
+          <th>Trạng thái</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+async function load() {
+  try {
+    const jobs = await fetch('/api/jobs').then(r=>r.json());
+    document.getElementById('s-total').textContent = jobs.length;
+    document.getElementById('s-done').textContent  = jobs.filter(j=>j.status==='done').length;
+    document.getElementById('s-run').textContent   = jobs.filter(j=>j.status==='running').length;
+    document.getElementById('s-fail').textContent  = jobs.filter(j=>['error','aborted'].includes(j.status)).length;
+
+    const tbody = document.getElementById('tbody');
+    if (!jobs.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="empty">Chưa có job nào. <a href="/migrate">Bắt đầu ngay →</a></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = jobs.map(j => `
+      <tr>
+        <td class="mono">${j.job_id}</td>
+        <td class="mono">${j.started||'—'}</td>
+        <td>${j.step||'—'}</td>
+        <td>
+          <div class="prog-mini"><div class="prog-mini-fill" style="width:${j.percent||0}%"></div></div>
+          <div class="mono" style="margin-top:3px">${j.percent||0}%</div>
+        </td>
+        <td><span class="badge badge-${j.status}">${j.status}</span></td>
+        <td><a class="btn-view" href="/progress?job=${j.job_id}">Xem</a></td>
+      </tr>
+    `).join('');
+  } catch(e) {
+    document.getElementById('tbody').innerHTML = `<tr><td colspan="6" class="empty" style="color:#dc2626">Không kết nối được server.</td></tr>`;
+  }
+}
+load();
+setInterval(load, 4000);
+</script>
+</body>
+</html>
