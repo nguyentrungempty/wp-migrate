@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>WP Migrator Pro — Progress</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#f0f4f8;--white:#fff;--src:#1a4fa0;--src-lt:#e8f0fd;--dst:#0d7a55;--dst-lt:#e6f5f0;--border:#d0d9e6;--text:#1a202c;--muted:#64748b;--danger:#dc2626;--success:#16a34a;--warn:#d97706;--radius:10px;--shadow:0 2px 12px rgba(0,0,0,0.08);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);font-family:'DM Sans',sans-serif;color:var(--text);min-height:100vh;}
+.topbar{background:var(--white);border-bottom:2px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:56px;sticky top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.logo{display:flex;align-items:center;gap:0.6rem;font-weight:800;font-size:1.1rem;color:var(--text);text-decoration:none;}
+.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--src),var(--dst));border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1rem;}
+.topnav a{padding:0.4rem 0.9rem;border-radius:6px;text-decoration:none;font-size:0.85rem;font-weight:500;color:var(--muted);transition:all 0.15s;margin-left:0.25rem;}
+.topnav a:hover{background:var(--src-lt);color:var(--src);}
+.layout{max-width:860px;margin:0 auto;padding:2rem 1.5rem;}
+.job-meta{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.4rem;}
+h1{font-size:1.6rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:1.5rem;display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;}
+.status-pill{font-size:0.72rem;padding:0.25rem 0.75rem;border-radius:999px;font-family:'IBM Plex Mono',monospace;font-weight:600;}
+.sp-running{background:#eff6ff;color:var(--src);}
+.sp-done{background:#f0fdf4;color:var(--success);}
+.sp-error,.sp-aborted{background:#fef2f2;color:var(--danger);}
+
+.card{background:var(--white);border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-bottom:1rem;}
+.card-section{padding:1.25rem;}
+.section-label{font-size:0.7rem;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:0.5rem;}
+.eta-msg{font-size:1rem;font-weight:600;color:var(--text);min-height:1.5rem;margin-bottom:1.25rem;}
+
+.prog-track{height:14px;background:#e2e8f0;border-radius:99px;overflow:hidden;margin-bottom:0.6rem;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--src),var(--dst));border-radius:99px;transition:width 0.5s ease;position:relative;overflow:hidden;}
+.prog-fill::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.3),transparent);animation:shim 1.5s infinite;}
+@keyframes shim{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.prog-meta{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--muted);}
+
+.steps{display:grid;grid-template-columns:repeat(5,1fr);border-top:1.5px solid var(--border);}
+.step{padding:0.9rem 0.5rem;text-align:center;border-right:1px solid var(--border);transition:background 0.3s;}
+.step:last-child{border-right:none;}
+.step-icon{font-size:1.3rem;display:block;margin-bottom:0.25rem;}
+.step-name{font-size:0.68rem;font-family:'IBM Plex Mono',monospace;color:var(--muted);display:block;}
+.step-state{font-size:0.6rem;font-family:'IBM Plex Mono',monospace;color:var(--muted);display:block;margin-top:0.15rem;}
+.step.active{background:var(--src-lt);}
+.step.active .step-name{color:var(--src);font-weight:600;}
+.step.active .step-icon{animation:pulse 1.3s infinite;}
+.step.done{background:var(--dst-lt);}
+.step.done .step-name{color:var(--dst);}
+.step.error{background:#fef2f2;}
+.step.error .step-name{color:var(--danger);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+.log-head{padding:0.65rem 1rem;font-size:0.7rem;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);background:#fafbfc;border-top:1.5px solid var(--border);border-bottom:1px solid var(--border);}
+.log-body{padding:0.75rem 1rem;max-height:260px;overflow-y:auto;font-family:'IBM Plex Mono',monospace;font-size:0.75rem;line-height:1.8;}
+.log-line{color:#475569;}
+.log-line.err{color:var(--danger);}
+.log-line.ok{color:var(--success);font-weight:600;}
+
+.actions{display:flex;gap:0.75rem;margin-top:1rem;}
+.btn{padding:0.7rem 1.4rem;border-radius:8px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:0.85rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:0.4rem;transition:all 0.15s;}
+.btn-abort{background:#fef2f2;color:var(--danger);border:1.5px solid var(--danger);}
+.btn-abort:hover{background:var(--danger);color:#fff;}
+.btn-back{background:var(--src);color:#fff;}
+.btn-back:hover{background:#1541a0;}
+.btn:disabled{opacity:0.45;cursor:not-allowed;}
+@media(max-width:600px){.steps{grid-template-columns:repeat(3,1fr);}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a class="logo" href="/dashboard">
+    <div class="logo-icon">⚡</div>
+    WP Migrator Pro
+  </a>
+  <nav class="topnav">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/migrate">Migrate</a>
+  </nav>
+</div>
+
+<div class="layout">
+  <div class="job-meta">JOB ID: <span id="job-id-lbl">—</span></div>
+  <h1>Chi tiết Migration <span class="status-pill sp-running" id="status-pill">running</span></h1>
+
+  <div class="card">
+    <div class="card-section">
+      <div class="section-label">// ETA — Estimation Time of Arrival</div>
+      <div class="eta-msg" id="eta-msg">Đang khởi tạo...</div>
+      <div class="prog-track">
+        <div class="prog-fill" id="prog-bar" style="width:0%"></div>
+      </div>
+      <div class="prog-meta">
+        <span id="prog-step">Bước: init</span>
+        <span id="prog-pct">0%</span>
+      </div>
+    </div>
+
+    <div class="steps">
+      <div class="step" id="s-login">
+        <span class="step-icon">🔑</span>
+        <span class="step-name">Login</span>
+        <span class="step-state" id="ss-login">chờ</span>
+      </div>
+      <div class="step" id="s-plugin">
+        <span class="step-icon">🔧</span>
+        <span class="step-name">Plugin</span>
+        <span class="step-state" id="ss-plugin">chờ</span>
+      </div>
+      <div class="step" id="s-backup">
+        <span class="step-icon">💾</span>
+        <span class="step-name">Backup</span>
+        <span class="step-state" id="ss-backup">chờ</span>
+      </div>
+      <div class="step" id="s-restore">
+        <span class="step-icon">📦</span>
+        <span class="step-name">Restore</span>
+        <span class="step-state" id="ss-restore">chờ</span>
+      </div>
+      <div class="step" id="s-cleanup">
+        <span class="step-icon">✅</span>
+        <span class="step-name">Done</span>
+        <span class="step-state" id="ss-cleanup">chờ</span>
+      </div>
+    </div>
+
+    <div class="log-head">// Live Output</div>
+    <div class="log-body" id="log-body"><span style="color:#b0bec5">Chờ output...</span></div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-abort" id="abort-btn">✕ Abort</button>
+    <a class="btn btn-back" href="/dashboard" id="back-btn" style="display:none">← Dashboard</a>
+    <a class="btn" href="/migrate" id="new-btn" style="display:none;background:#f0fdf4;color:var(--success);border:1.5px solid var(--success)">＋ Migration mới</a>
+  </div>
+</div>
+
+<script>
+const params = new URLSearchParams(location.search);
+const jobId  = params.get('job');
+if (!jobId) location.href='/dashboard';
+
+document.getElementById('job-id-lbl').textContent = jobId;
+
+const stepMap   = { login:'s-login', plugin:'s-plugin', backup:'s-backup', download:'s-backup', restore:'s-restore', cleanup:'s-cleanup', done:'s-cleanup' };
+const stepOrder = ['s-login','s-plugin','s-backup','s-restore','s-cleanup'];
+const stateIds  = { 's-login':'ss-login','s-plugin':'ss-plugin','s-backup':'ss-backup','s-restore':'ss-restore','s-cleanup':'ss-cleanup' };
+
+function setSteps(step, status) {
+  const cur = stepMap[step] || '';
+  const idx = stepOrder.indexOf(cur);
+  stepOrder.forEach((id, i) => {
+    const el = document.getElementById(id);
+    const si = document.getElementById(stateIds[id]);
+    el.classList.remove('active','done','error');
+    if (status==='done') { el.classList.add('done'); si.textContent='xong'; }
+    else if (status==='error' && id===cur) { el.classList.add('error'); si.textContent='lỗi'; }
+    else if (i < idx) { el.classList.add('done'); si.textContent='xong'; }
+    else if (id===cur) { el.classList.add('active'); si.textContent='đang chạy...'; }
+    else si.textContent='chờ';
+  });
+}
+
+function setPill(status) {
+  const p = document.getElementById('status-pill');
+  p.className = 'status-pill sp-' + status;
+  const labels = { running:'đang chạy', done:'hoàn tất', error:'lỗi', aborted:'đã hủy' };
+  p.textContent = labels[status] || status;
+}
+
+async function poll() {
+  try {
+    const [pr, lr] = await Promise.all([
+      fetch('/api/migrate/progress/'+jobId).then(r=>r.json()),
+      fetch('/api/migrate/logs/'+jobId).then(r=>r.json()),
+    ]);
+
+    document.getElementById('prog-bar').style.width = (pr.percent||0)+'%';
+    document.getElementById('prog-pct').textContent  = (pr.percent||0)+'%';
+    document.getElementById('prog-step').textContent = 'Bước: '+(pr.step||'init');
+    document.getElementById('eta-msg').textContent   = pr.message||'...';
+    setPill(pr.status||'running');
+    setSteps(pr.step, pr.status);
+
+    if (lr.logs && lr.logs.length) {
+      const body = document.getElementById('log-body');
+      body.innerHTML = lr.logs.map(l => {
+        const c = l.includes('[ERROR]') ? 'err' : (l.includes('successfully')||l.includes('[DONE]')) ? 'ok' : '';
+        return `<div class="log-line ${c}">${l}</div>`;
+      }).join('');
+      body.scrollTop = body.scrollHeight;
+    }
+
+    if (['done','error','aborted'].includes(pr.status)) {
+      document.getElementById('abort-btn').style.display='none';
+      document.getElementById('back-btn').style.display='inline-flex';
+      document.getElementById('new-btn').style.display='inline-flex';
+      return;
+    }
+    setTimeout(poll, 2000);
+  } catch { setTimeout(poll, 3000); }
+}
+
+document.getElementById('abort-btn').addEventListener('click', async () => {
+  if (!confirm('Hủy migration?')) return;
+  await fetch('/api/migrate/abort/'+jobId, {method:'POST'});
+  document.getElementById('abort-btn').disabled = true;
+});
+
+poll();
+</script>
+</body>
+</html>
