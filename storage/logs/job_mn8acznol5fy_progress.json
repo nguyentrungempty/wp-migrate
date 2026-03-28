@@ -1,0 +1,10 @@
+{
+  "job_id": "job_mn8acznol5fy",
+  "status": "error",
+  "step": "error",
+  "percent": 0,
+  "message": "Lỗi: Restore error: Cannot open backup zip",
+  "aborted": false,
+  "started": "2026-03-27 02:32:15",
+  "updated": "2026-03-27 02:33:13"
+}

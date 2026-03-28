@@ -1,0 +1,10 @@
+{
+  "job_id": "job_mn76o7s8gsic",
+  "status": "error",
+  "step": "error",
+  "percent": 0,
+  "message": "Lỗi: Navigation timeout of 60000 ms exceeded",
+  "aborted": false,
+  "started": "2026-03-26 08:01:14",
+  "updated": "2026-03-26 08:03:23"
+}

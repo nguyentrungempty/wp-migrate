@@ -1,0 +1,26 @@
+[2026-03-26 07:58:12] [LOGIN] Đăng nhập source: https://demov1.trungnq.xyz/
+[2026-03-26 07:58:12] Logging in to https://demov1.trungnq.xyz as admin...
+[2026-03-26 07:58:14] [attempt 1] status=200 auth=true
+[2026-03-26 07:58:14] ✓ Login successful: https://demov1.trungnq.xyz
+[2026-03-26 07:58:14] [LOGIN] Đăng nhập destination: https://demov2.trungnq.xyz/
+[2026-03-26 07:58:14] Logging in to https://demov2.trungnq.xyz as admin...
+[2026-03-26 07:58:15] [attempt 1] status=200 auth=true
+[2026-03-26 07:58:15] ✓ Login successful: https://demov2.trungnq.xyz
+[2026-03-26 07:58:15] [PLUGIN] Cài helper plugin trên source...
+[2026-03-26 07:58:15] Checking wpm-helper on https://demov1.trungnq.xyz...
+[2026-03-26 07:58:15] Plugin ping: status=400 body=0
+[2026-03-26 07:58:15] Plugin not found — installing via headless browser...
+[2026-03-26 07:58:15] Launching headless Chrome...
+[2026-03-26 07:58:16] Browser: logging in to https://demov1.trungnq.xyz
+[2026-03-26 07:58:20] Browser: logged in, URL=https://demov1.trungnq.xyz/wp-admin/
+[2026-03-26 07:58:21] Browser: on plugin-install page
+[2026-03-26 07:58:21] Browser: file selected, clicking Install Now...
+[2026-03-26 07:58:26] Browser: install result page = https://demov1.trungnq.xyz/wp-admin/update.php?action=upload-plugin
+[2026-03-26 07:58:26] Browser: activate links on result page: []
+[2026-03-26 07:58:26] Browser: no activate link on result page, going to plugins.php...
+[2026-03-26 07:58:28] Browser: plugin rows found: advanced-custom-fields, advanced-custom-fields, akismet, all-in-one-wp-migration, all-in-one-wp-migration, all-in-one-wp-migration-google-drive-extension, button-contact-vr, button-contact-vr, contact-form-7, contact-form-7, duplicator-pro, font-awesome, font-awesome, hello-dolly, inet-toolkit-official, backup, perfect-woocommerce-brands, perfect-woocommerce-brands, wcpas-product-attributes-shortcode, wcpas-product-attributes-shortcode, safe-svg, safe-svg, speedycache, woocommerce, woocommerce, wordpress-importer, wordpress-importer, wp-migrator-helper, yith-woocommerce-wishlist, yith-woocommerce-wishlist
+[2026-03-26 07:58:28] Browser: found activate link with selector: a[href*="plugin=wpm-helper"][href*="action=activate"]
+[2026-03-26 07:58:29] Browser: activated from plugins list
+[2026-03-26 07:58:29] Browser: installation complete
+[2026-03-26 07:58:32] Plugin ping: status=400 body=0
+[2026-03-26 07:58:32] [ERROR] Plugin uploaded but not responding on https://demov1.trungnq.xyz — kiểm tra WP Admin > Plugins

@@ -1,0 +1,70 @@
+[2026-03-28 09:55:27] [LOGIN] Đăng nhập source: https://demov1.trungnq.xyz
+[2026-03-28 09:55:27] Logging in to https://demov1.trungnq.xyz as admin...
+[2026-03-28 09:55:28] [attempt 1] status=200 auth=true
+[2026-03-28 09:55:28] ✓ Login successful: https://demov1.trungnq.xyz
+[2026-03-28 09:55:28] [LOGIN] Đăng nhập destination: https://demov2.trungnq.xyz
+[2026-03-28 09:55:28] Logging in to https://demov2.trungnq.xyz as admin...
+[2026-03-28 09:55:28] [attempt 1] status=200 auth=true
+[2026-03-28 09:55:28] ✓ Login successful: https://demov2.trungnq.xyz
+[2026-03-28 09:55:28] [PLUGIN] Cài helper plugin trên source...
+[2026-03-28 09:55:28] Checking wpm-helper on https://demov1.trungnq.xyz...
+[2026-03-28 09:55:29] Plugin ping: status=400 body=0
+[2026-03-28 09:55:29] Plugin not found — installing via headless browser...
+[2026-03-28 09:55:29] Launching headless Chrome...
+[2026-03-28 09:55:29] Browser: logging in to https://demov1.trungnq.xyz
+[2026-03-28 09:55:33] Browser: logged in, URL=https://demov1.trungnq.xyz/wp-admin/
+[2026-03-28 09:55:35] Browser: on plugin-install page
+[2026-03-28 09:55:35] Browser: file selected, clicking Install Now...
+[2026-03-28 09:55:39] Browser: install result page = https://demov1.trungnq.xyz/wp-admin/update.php?action=upload-plugin
+[2026-03-28 09:55:39] Browser: activate links on result page: ["https://demov1.trungnq.xyz/wp-admin/plugins.php?action=activate&plugin=wpm-helper%2Fwpm-helper.php&_wpnonce=05ef39ba40"]
+[2026-03-28 09:55:39] Browser: clicking activate on result page...
+[2026-03-28 09:55:42] Browser: activated, now at https://demov1.trungnq.xyz/wp-admin/plugins.php?plugin_status=all&paged=1&s
+[2026-03-28 09:55:42] Browser: installation complete
+[2026-03-28 09:55:45] Plugin ping: status=200 body={"success":true,"data":"pong"}
+[2026-03-28 09:55:45] ✓ wpm-helper installed and active on https://demov1.trungnq.xyz
+[2026-03-28 09:55:45] [PLUGIN] Cài helper plugin trên destination...
+[2026-03-28 09:55:45] Checking wpm-helper on https://demov2.trungnq.xyz...
+[2026-03-28 09:55:45] Plugin ping: status=400 body=0
+[2026-03-28 09:55:45] Plugin not found — installing via headless browser...
+[2026-03-28 09:55:45] Launching headless Chrome...
+[2026-03-28 09:55:45] Browser: logging in to https://demov2.trungnq.xyz
+[2026-03-28 09:55:48] Browser: logged in, URL=https://demov2.trungnq.xyz/wp-admin/
+[2026-03-28 09:55:49] Browser: on plugin-install page
+[2026-03-28 09:55:49] Browser: file selected, clicking Install Now...
+[2026-03-28 09:55:53] Browser: install result page = https://demov2.trungnq.xyz/wp-admin/update.php?action=upload-plugin
+[2026-03-28 09:55:53] Browser: activate links on result page: ["https://demov2.trungnq.xyz/wp-admin/plugins.php?action=activate&plugin=wpm-helper%2Fwpm-helper.php&_wpnonce=b8b3b99781"]
+[2026-03-28 09:55:53] Browser: clicking activate on result page...
+[2026-03-28 09:55:55] Browser: activated, now at https://demov2.trungnq.xyz/wp-admin/plugins.php?plugin_status=all&paged=1&s
+[2026-03-28 09:55:55] Browser: installation complete
+[2026-03-28 09:55:57] Plugin ping: status=200 body={"success":true,"data":"pong"}
+[2026-03-28 09:55:57] ✓ wpm-helper installed and active on https://demov2.trungnq.xyz
+[2026-03-28 09:55:57] [BACKUP] Tạo backup (database + files + plugins + themes)...
+[2026-03-28 09:55:57] Creating backup on https://demov1.trungnq.xyz...
+[2026-03-28 09:56:02] Got 6 browser cookies for backup
+[2026-03-28 09:56:12] Backup response: {"success":true,"data":{"file":"wpm-backup-job_mna5mt5k8ukh.zip","url":"https:\/\/demov1.trungnq.xyz\/wp-content\/uploads\/wpm-backups\/wpm-backup-job_mna5mt5k8ukh.zip","size":103055807,"db_size":3403741,"db_tables":56}}
+[2026-03-28 09:56:12] ✓ Backup: wpm-backup-job_mna5mt5k8ukh.zip (98MB, db_size=3324KB, tables=56)
+[2026-03-28 09:56:12] [DOWNLOAD] Tải backup về (98MB)...
+[2026-03-28 09:56:12] Downloading backup: wpm-backup-job_mna5mt5k8ukh.zip (98MB)
+[2026-03-28 09:56:17] Got 6 browser cookies for download
+[2026-03-28 09:56:20] Download status: 200, size: 103055807
+[2026-03-28 09:56:20] ✓ Downloaded: 98MB
+[2026-03-28 09:56:20] [RESTORE] Upload và restore trên destination...
+[2026-03-28 09:56:20] Restoring to https://demov2.trungnq.xyz ...
+[2026-03-28 09:56:20] Backup size: 98MB
+[2026-03-28 09:56:23] Got 4 cookies from browser
+[2026-03-28 09:56:23] Got nonce: 4ae36585b0
+[2026-03-28 09:56:30] Restore response (580 chars): {"success":true,"data":{"message":"Restore completed","log":["Uploaded file size: 98.3MB","Domain: https:\/\/demov1.trungnq.xyz \u2192 https:\/\/demov2.trungnq.xyz","Saved zip: 98.3MB","Zip contains 12047 files","database.sql in zip: YES (index 0)","Backup from: https:\/\/demov1.trungnq.xyz at 2026-03-28 09:56:02","Extracted to: \/home\/yocgwsjghosting\/public_html\/demov2.trungnq.xyz\/wp-content\/uploads\/wpm-restore-1774691785","Files: wp-content copied OK","DB file size: 3324KB","DB import: 3
+[2026-03-28 09:56:30]   [restore] Uploaded file size: 98.3MB
+[2026-03-28 09:56:30]   [restore] Domain: https://demov1.trungnq.xyz → https://demov2.trungnq.xyz
+[2026-03-28 09:56:30]   [restore] Saved zip: 98.3MB
+[2026-03-28 09:56:30]   [restore] Zip contains 12047 files
+[2026-03-28 09:56:30]   [restore] database.sql in zip: YES (index 0)
+[2026-03-28 09:56:30]   [restore] Backup from: https://demov1.trungnq.xyz at 2026-03-28 09:56:02
+[2026-03-28 09:56:30]   [restore] Extracted to: /home/yocgwsjghosting/public_html/demov2.trungnq.xyz/wp-content/uploads/wpm-restore-1774691785
+[2026-03-28 09:56:30]   [restore] Files: wp-content copied OK
+[2026-03-28 09:56:30]   [restore] DB file size: 3324KB
+[2026-03-28 09:56:30]   [restore] DB import: 3751 OK, 0 errors
+[2026-03-28 09:56:30]   [restore] Activated 13 plugins from backup
+[2026-03-28 09:56:30]   [restore] Theme set to: flatsome
+[2026-03-28 09:56:30] ✓ Restore completed on https://demov2.trungnq.xyz
+[2026-03-28 09:56:30] [DONE] Migration completed successfully.

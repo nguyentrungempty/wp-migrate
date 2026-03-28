@@ -154,16 +154,21 @@ class WpAdminService {
   }
 
   async _isPluginActive(session) {
+    // Use wpm_ping — registered as nopriv so no cookie needed
+    // This avoids SameSite cookie blocking entirely
     try {
       const res  = await this._request(session.siteUrl + '/wp-admin/admin-ajax.php', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Cookie': this._cookieHeader(session.cookies) },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         timeout: 15000,
-      }, 'action=wpm_get_nonce');
+      }, 'action=wpm_ping');
       const body = res.text().trim();
-      this.log('Plugin check: ' + body.slice(0, 60));
+      this.log('Plugin ping: status=' + res.status + ' body=' + body.slice(0, 80));
       return res.status === 200 && body.includes('"success":true');
-    } catch { return false; }
+    } catch(e) {
+      this.log('Plugin ping error: ' + e.message);
+      return false;
+    }
   }
 
   async _installViaHeadlessBrowser(session, zipPath) {
@@ -225,7 +230,11 @@ class WpAdminService {
       }
 
       // ── 4. Activate ───────────────────────────────────────────────────────
-      // Try activate link on install result page first
+      // Log all activate links found on current page for debug
+      const allLinks = await page.$$eval('a', els => els.map(a => a.href).filter(h => h.includes('activate')));
+      this.log('Browser: activate links on result page: ' + JSON.stringify(allLinks.slice(0,5)));
+
+      // Try any activate link on install result page
       const activateBtn = await page.$('a[href*="action=activate"]');
       if (activateBtn) {
         this.log('Browser: clicking activate on result page...');
@@ -233,20 +242,62 @@ class WpAdminService {
           page.waitForNavigation({ waitUntil: 'networkidle2' }),
           activateBtn.click(),
         ]);
+        this.log('Browser: activated, now at ' + page.url());
       } else {
-        // Go to plugins list
+        // Navigate to plugins list and find activation link
+        this.log('Browser: no activate link on result page, going to plugins.php...');
         await page.goto(session.siteUrl + '/wp-admin/plugins.php', { waitUntil: 'networkidle2' });
-        const activateInList = await page.$('tr[data-slug="wpm-helper"] a[href*="action=activate"]');
-        if (activateInList) {
-          await Promise.all([
-            page.waitForNavigation({ waitUntil: 'networkidle2' }),
-            activateInList.click(),
-          ]);
-          this.log('Browser: activated from plugins list');
-        } else {
-          const isActive = await page.$('tr.active[data-slug="wpm-helper"]');
-          if (!isActive) throw new Error('Cannot activate wpm-helper — check WP Admin > Plugins');
-          this.log('Browser: plugin already active in list');
+
+        // Log all rows with wpm in slug for debug
+        const pluginRows = await page.$$eval('tr[data-slug]', els => els.map(el => el.getAttribute('data-slug')));
+        this.log('Browser: plugin rows found: ' + pluginRows.join(', '));
+
+        // Try multiple selectors
+        const activateSelectors = [
+          'tr[data-slug="wpm-helper"] a[href*="action=activate"]',
+          'tr[data-slug="wpm-helper\/wpm-helper"] a[href*="action=activate"]',
+          'a[href*="plugin=wpm-helper"][href*="action=activate"]',
+          'a[href*="wpm-helper"][href*="activate"]',
+        ];
+
+        let activated = false;
+        for (const sel of activateSelectors) {
+          const el = await page.$(sel);
+          if (el) {
+            this.log('Browser: found activate link with selector: ' + sel);
+            await Promise.all([
+              page.waitForNavigation({ waitUntil: 'networkidle2' }),
+              el.click(),
+            ]);
+            this.log('Browser: activated from plugins list');
+            activated = true;
+            break;
+          }
+        }
+
+        if (!activated) {
+          // Check if already active (no activate link = already active)
+          const isActive = await page.$('tr.active[data-slug="wpm-helper"], tr.active[data-plugin="wpm-helper/wpm-helper.php"]');
+          if (isActive) {
+            this.log('Browser: plugin already active');
+          } else {
+            // Last resort: get href directly from page and navigate
+            const activateHref = await page.evaluate(function() {
+              var links = Array.from(document.querySelectorAll('a'));
+              var link = links.find(function(a) { return a.href.includes('wpm') && a.href.includes('activate'); });
+              return link ? link.href : null;
+            });
+            if (activateHref) {
+              this.log('Browser: found activate href via evaluate: ' + activateHref);
+              await page.goto(activateHref, { waitUntil: 'networkidle2' });
+              this.log('Browser: activated via direct navigation');
+            } else {
+              // Dump page content for debug
+              const pluginsHtml = await page.content();
+              this.log('Browser: wpm-helper section: ' + (pluginsHtml.match(/wpm[\s\S]{0,500}/)?.[0]?.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim() || 'NOT FOUND'));
+              throw new Error('Cannot find activate link for wpm-helper on plugins.php');
+            }
+          }
         }
       }
 
@@ -260,47 +311,88 @@ class WpAdminService {
 
   async createBackup(session, jobId) {
     this.log('Creating backup on ' + session.siteUrl + '...');
+
+    // Get valid cookies from real browser login (bypasses SameSite restriction)
+    const cookies = await this._getBrowserCookies(session);
+    this.log('Got ' + Object.keys(cookies).length + ' browser cookies for backup');
+
     const res = await this._request(session.siteUrl + '/wp-admin/admin-ajax.php', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Cookie': this._cookieHeader(session.cookies), 'Referer': session.siteUrl + '/wp-admin/' },
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Cookie': this._cookieHeader(cookies),
+        'Referer': session.siteUrl + '/wp-admin/',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
       timeout: 600000,
     }, 'action=wpm_create_backup&job_id=' + encodeURIComponent(jobId));
 
     const raw = res.text();
-    this.log('Backup response: ' + raw.slice(0, 200));
-    if (!raw || raw === '0' || raw === '-1') throw new Error('Backup AJAX failed: ' + (raw||'empty'));
+    this.log('Backup response: ' + raw.slice(0, 300));
+    if (!raw || raw === '0' || raw === '-1') throw new Error('Backup AJAX failed: ' + (raw || 'empty'));
     let data;
-    try { data = JSON.parse(raw); } catch { throw new Error('Backup not JSON: ' + raw.slice(0,200)); }
+    try { data = JSON.parse(raw); } catch { throw new Error('Backup not JSON: ' + raw.slice(0, 200)); }
     if (!data.success) throw new Error('Backup error: ' + (data.data || JSON.stringify(data)));
-    this.log('✓ Backup: ' + data.data.file + ' (' + Math.round((data.data.size||0)/1024/1024) + 'MB)');
+    this.log('✓ Backup: ' + data.data.file + ' (' + Math.round((data.data.size||0)/1024/1024) + 'MB, db_size=' + Math.round((data.data.db_size||0)/1024) + 'KB, tables=' + (data.data.db_tables||'?') + ')');
     return data.data;
   }
 
-  // ── Download ──────────────────────────────────────────────────────────────
+  // ── Download backup ───────────────────────────────────────────────────────
 
   async downloadBackup(session, backupInfo, destPath) {
-    this.log('Downloading backup...');
-    const res = await this._request(backupInfo.url, { headers: { Cookie: this._cookieHeader(session.cookies) }, timeout: 600000 });
-    if (res.status !== 200) throw new Error('Download failed HTTP ' + res.status);
-    fs.writeFileSync(destPath, res.body);
-    this.log('✓ Downloaded: ' + Math.round(res.body.length/1024/1024) + 'MB');
+    this.log('Downloading backup: ' + backupInfo.file + ' (' + Math.round((backupInfo.size||0)/1024/1024) + 'MB)');
+
+    // Get real browser cookies (bypasses SameSite)
+    const cookies = await this._getBrowserCookies(session);
+    this.log('Got ' + Object.keys(cookies).length + ' browser cookies for download');
+
+    // Download via AJAX endpoint (bypasses .htaccess deny on uploads dir)
+    const ajaxUrl = session.siteUrl + '/wp-admin/admin-ajax.php'
+      + '?action=wpm_download_backup&file=' + encodeURIComponent(backupInfo.file);
+
+    const res = await this._request(ajaxUrl, {
+      headers: { 'Cookie': this._cookieHeader(cookies) },
+      timeout: 600000,
+    });
+
+    this.log('Download status: ' + res.status + ', size: ' + res.body.length);
+
+    if (res.status === 200 && res.body.length > 10000) {
+      fs.writeFileSync(destPath, res.body);
+      this.log('✓ Downloaded: ' + Math.round(res.body.length/1024/1024) + 'MB');
+      return;
+    }
+
+    // Log response for debug
+    const preview = res.text().slice(0, 200);
+    this.log('Download response preview: ' + preview);
+    throw new Error('Download failed: HTTP ' + res.status + ', size=' + res.body.length);
   }
 
   // ── Restore ───────────────────────────────────────────────────────────────
 
   async uploadAndRestore(session, zipPath, oldDomain, newDomain) {
-    this.log('Restoring to ' + session.siteUrl + '...');
+    this.log('Restoring to ' + session.siteUrl + ' ...');
+    const zipSize = fs.statSync(zipPath).size;
+    this.log('Backup size: ' + Math.round(zipSize/1024/1024) + 'MB');
+
+    // Get valid cookies from browser (bypasses SameSite), then use HTTP for upload
+    const cookies = await this._getBrowserCookies(session);
+    this.log('Got ' + Object.keys(cookies).length + ' cookies from browser');
+
+    // Get nonce using browser cookies via HTTP
     let nonce = 'no-nonce';
     try {
-      const nr = await this._request(session.siteUrl + '/wp-admin/admin-ajax.php', {
+      const nr  = await this._request(session.siteUrl + '/wp-admin/admin-ajax.php', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Cookie': this._cookieHeader(session.cookies) },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Cookie': this._cookieHeader(cookies) },
         timeout: 15000,
       }, 'action=wpm_get_nonce');
       const nd = JSON.parse(nr.text());
-      if (nd.success) nonce = nd.data;
-    } catch {}
+      if (nd.success) { nonce = nd.data; this.log('Got nonce: ' + nonce); }
+    } catch(e) { this.log('Nonce error: ' + e.message); }
 
+    // Upload via HTTP multipart using browser cookies
     const zipData  = fs.readFileSync(zipPath);
     const boundary = 'WPMRestore' + Date.now();
     const parts = [
@@ -315,31 +407,52 @@ class WpAdminService {
 
     const res = await this._request(session.siteUrl + '/wp-admin/admin-ajax.php', {
       method: 'POST',
-      headers: { 'Content-Type': 'multipart/form-data; boundary=' + boundary, 'Cookie': this._cookieHeader(session.cookies), 'Referer': session.siteUrl + '/wp-admin/' },
+      headers: {
+        'Content-Type': 'multipart/form-data; boundary=' + boundary,
+        'Cookie': this._cookieHeader(cookies),
+        'Referer': session.siteUrl + '/wp-admin/',
+      },
       timeout: 600000,
     }, Buffer.concat(parts));
 
     const raw = res.text();
-    this.log('Restore response: ' + raw.slice(0, 200));
+    this.log('Restore response (' + raw.length + ' chars): ' + raw.slice(0, 500));
     let data;
-    try { data = JSON.parse(raw); } catch { throw new Error('Restore not JSON: ' + raw.slice(0,200)); }
-    if (!data.success) throw new Error('Restore error: ' + (data.data || JSON.stringify(data)));
+    try { data = JSON.parse(raw); } catch { throw new Error('Restore not JSON: ' + raw.slice(0, 300)); }
+    if (!data.success) throw new Error('Restore error: ' + JSON.stringify(data.data || data));
+
+    // Log restore details
+    if (data.data && data.data.log) {
+      data.data.log.forEach(line => this.log('  [restore] ' + line));
+    }
     this.log('✓ Restore completed on ' + session.siteUrl);
   }
 
-  // ── Cleanup ───────────────────────────────────────────────────────────────
+  // Get valid session cookies by logging in via real browser
+  async _getBrowserCookies(session) {
+    let puppeteer;
+    try { puppeteer = require('puppeteer'); } catch { throw new Error('Puppeteer not installed'); }
 
-  async cleanupPlugin(session) {
-    // Keep plugin installed for future migrations — only clean backup files
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage','--disable-gpu','--no-zygote'],
+      ignoreHTTPSErrors: true,
+    });
+    const page = await browser.newPage();
     try {
-      await this._request(session.siteUrl + '/wp-admin/admin-ajax.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Cookie': this._cookieHeader(session.cookies) },
-        timeout: 15000,
-      }, 'action=wpm_cleanup_files');
-    } catch {}
-    this.log('Cleanup done (plugin kept for future use) on ' + session.siteUrl);
+      await page.goto(session.siteUrl + '/wp-login.php', { waitUntil: 'networkidle2' });
+      await page.type('#user_login', session.username, { delay: 20 });
+      await page.type('#user_pass',  session.password,  { delay: 20 });
+      await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle2' }), page.click('#wp-submit')]);
+      const cookies = await page.cookies();
+      const cookieMap = {};
+      cookies.forEach(c => { cookieMap[c.name] = c.value; });
+      return cookieMap;
+    } finally {
+      await browser.close();
+    }
   }
+
 
   // ── ZIP builder ───────────────────────────────────────────────────────────
 
@@ -395,3 +508,4 @@ class WpAdminService {
 }
 
 module.exports = WpAdminService;
+

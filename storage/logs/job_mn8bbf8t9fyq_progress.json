@@ -1,0 +1,10 @@
+{
+  "job_id": "job_mn8bbf8t9fyq",
+  "status": "error",
+  "step": "error",
+  "percent": 0,
+  "message": "Lỗi: Download timed out after 10 minutes",
+  "aborted": false,
+  "started": "2026-03-27 02:59:01",
+  "updated": "2026-03-27 03:09:52"
+}

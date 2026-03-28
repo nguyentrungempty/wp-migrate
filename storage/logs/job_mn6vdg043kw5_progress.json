@@ -1,0 +1,10 @@
+{
+  "job_id": "job_mn6vdg043kw5",
+  "status": "error",
+  "step": "error",
+  "percent": 0,
+  "message": "Lỗi: Login failed for https://demov1.trungnq.xyz — sai tài khoản/mật khẩu",
+  "aborted": false,
+  "started": "2026-03-26 02:44:56",
+  "updated": "2026-03-26 02:44:57"
+}

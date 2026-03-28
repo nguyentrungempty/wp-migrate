@@ -1,0 +1,10 @@
+{
+  "job_id": "job_mmpywev9jc3n",
+  "status": "error",
+  "step": "error",
+  "percent": 0,
+  "message": "Lỗi: Cannot activate wpm-helper — check WP Admin > Plugins",
+  "aborted": false,
+  "started": "2026-03-14 06:51:35",
+  "updated": "2026-03-14 06:51:50"
+}

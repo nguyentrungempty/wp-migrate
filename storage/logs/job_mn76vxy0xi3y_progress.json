@@ -1,0 +1,10 @@
+{
+  "job_id": "job_mn76vxy0xi3y",
+  "status": "error",
+  "step": "error",
+  "percent": 0,
+  "message": "Lỗi: Backup AJAX failed: 0",
+  "aborted": false,
+  "started": "2026-03-26 08:07:15",
+  "updated": "2026-03-26 08:07:45"
+}

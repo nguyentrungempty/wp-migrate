@@ -1,0 +1,10 @@
+{
+  "job_id": "job_mn76kb5z5ic4",
+  "status": "error",
+  "step": "error",
+  "percent": 0,
+  "message": "Lỗi: Plugin uploaded but not responding on https://demov1.trungnq.xyz — kiểm tra WP Admin > Plugins",
+  "aborted": false,
+  "started": "2026-03-26 07:58:12",
+  "updated": "2026-03-26 07:58:32"
+}
