@@ -221,12 +221,19 @@ class WpAdminService {
       this.log('Browser: install result page = ' + page.url());
 
       const html = await page.content();
-      if (html.includes('Installation failed') || html.includes('already installed')) {
-        if (html.includes('already installed')) {
-          this.log('Plugin already installed, activating...');
-        } else {
-          throw new Error('Install failed: ' + html.match(/class="wp-die-message">([\s\S]{0,200})/)?.[1]?.replace(/<[^>]+>/g,'').trim() || 'unknown');
-        }
+      this.log('Browser: install page HTML snippet: ' + html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').slice(0, 500));
+
+      if (html.includes('already installed') || html.includes('Plugin already installed')) {
+        this.log('Plugin already installed, proceeding to activate...');
+      } else if (html.includes('Installation failed') || html.includes('Plugin installation failed')) {
+        // Extract error message from various possible containers
+        const errText = (
+          html.match(/id="message"[^>]*>([\s\S]{0,400})<\/div>/)?.[1] ||
+          html.match(/class="[^"]*error[^"]*"[^>]*>([\s\S]{0,400})<\/[^>]+>/)?.[1] ||
+          html.match(/<p>([\s\S]{0,300})<\/p>/)?.[1] ||
+          html.slice(0, 500)
+        ).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300);
+        throw new Error('Install failed: ' + errText);
       }
 
       // ── 4. Activate ───────────────────────────────────────────────────────
@@ -508,4 +515,3 @@ class WpAdminService {
 }
 
 module.exports = WpAdminService;
-
