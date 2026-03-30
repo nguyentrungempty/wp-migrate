@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>WP Migrator Pro — Đăng nhập</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet"/>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:#f0f4f8; font-family:'DM Sans',sans-serif; min-height:100vh; display:flex; align-items:center; justify-content:center; }
+.card { background:#fff; border-radius:16px; box-shadow:0 4px 24px rgba(0,0,0,0.10); padding:2.5rem 2rem; width:100%; max-width:380px; }
+.logo { display:flex; align-items:center; gap:.75rem; justify-content:center; margin-bottom:2rem; }
+.logo-icon { width:40px; height:40px; background:linear-gradient(135deg,#1a4fa0,#0d7a55); border-radius:10px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.3rem; }
+.logo-text { font-weight:800; font-size:1.2rem; color:#1a202c; }
+h2 { text-align:center; font-size:1rem; color:#64748b; font-weight:500; margin-bottom:1.75rem; }
+.field { margin-bottom:1.1rem; }
+.field label { display:block; font-size:.78rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.06em; margin-bottom:.4rem; }
+.field input { width:100%; padding:.7rem 1rem; border:1.5px solid #d0d9e6; border-radius:8px; font-size:.95rem; font-family:inherit; outline:none; transition:border-color .15s; }
+.field input:focus { border-color:#1a4fa0; }
+.btn { width:100%; padding:.85rem; background:linear-gradient(135deg,#1a4fa0,#0d7a55); color:#fff; border:none; border-radius:8px; font-size:1rem; font-weight:700; cursor:pointer; margin-top:.5rem; }
+.btn:hover { opacity:.92; }
+.btn:disabled { opacity:.5; cursor:not-allowed; }
+.error { background:#fef2f2; border:1px solid #fca5a5; color:#dc2626; border-radius:8px; padding:.7rem 1rem; font-size:.85rem; margin-top:1rem; display:none; }
+.error.show { display:block; }
+.change-pw { margin-top:1.5rem; padding-top:1.5rem; border-top:1px solid #e2e8f0; }
+.change-pw summary { cursor:pointer; font-size:.82rem; color:#64748b; font-weight:600; }
+.change-pw-body { margin-top:1rem; display:flex; flex-direction:column; gap:.75rem; }
+.change-pw-body input { width:100%; padding:.65rem .9rem; border:1.5px solid #d0d9e6; border-radius:8px; font-size:.9rem; font-family:inherit; outline:none; }
+.change-pw-body input:focus { border-color:#1a4fa0; }
+.btn-sm { padding:.6rem; background:#1a4fa0; color:#fff; border:none; border-radius:8px; font-size:.85rem; font-weight:600; cursor:pointer; }
+.ok { color:#16a34a; font-size:.82rem; margin-top:.25rem; display:none; }
+.ok.show { display:block; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    <div class="logo-text">WP Migrator Pro</div>
+  </div>
+  <h2>Đăng nhập để tiếp tục</h2>
+
+  <div class="field">
+    <label>Tài khoản</label>
+    <input id="username" type="text" placeholder="admin" autocomplete="username"/>
+  </div>
+  <div class="field">
+    <label>Mật khẩu</label>
+    <input id="password" type="password" placeholder="••••••••" autocomplete="current-password"/>
+  </div>
+  <button class="btn" id="login-btn">Đăng nhập</button>
+  <div class="error" id="error-msg"></div>
+
+  <details class="change-pw">
+    <summary>Đổi mật khẩu</summary>
+    <div class="change-pw-body">
+      <input id="cp-user" type="text" placeholder="Tài khoản"/>
+      <input id="cp-old"  type="password" placeholder="Mật khẩu hiện tại"/>
+      <input id="cp-new"  type="password" placeholder="Mật khẩu mới (tối thiểu 6 ký tự)"/>
+      <button class="btn-sm" id="cp-btn">Đổi mật khẩu</button>
+      <div class="ok" id="cp-ok">✓ Đổi mật khẩu thành công</div>
+      <div class="error" id="cp-err"></div>
+    </div>
+  </details>
+</div>
+
+<script>
+async function login() {
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  const btn      = document.getElementById('login-btn');
+  const errEl    = document.getElementById('error-msg');
+  if (!username || !password) { showErr(errEl, 'Vui lòng nhập đầy đủ'); return; }
+  btn.disabled = true; btn.textContent = 'Đang đăng nhập...';
+  try {
+    const res  = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username,password}) });
+    const data = await res.json();
+    if (data.success) {
+      window.location.href = '/dashboard';
+    } else {
+      showErr(errEl, data.error || 'Đăng nhập thất bại');
+      btn.disabled = false; btn.textContent = 'Đăng nhập';
+    }
+  } catch(e) {
+    showErr(errEl, 'Không kết nối được server');
+    btn.disabled = false; btn.textContent = 'Đăng nhập';
+  }
+}
+
+document.getElementById('login-btn').addEventListener('click', login);
+document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+document.getElementById('username').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('password').focus(); });
+
+document.getElementById('cp-btn').addEventListener('click', async () => {
+  const user   = document.getElementById('cp-user').value.trim();
+  const oldPw  = document.getElementById('cp-old').value;
+  const newPw  = document.getElementById('cp-new').value;
+  const okEl   = document.getElementById('cp-ok');
+  const errEl  = document.getElementById('cp-err');
+  okEl.classList.remove('show'); errEl.classList.remove('show');
+  if (!user || !oldPw || !newPw) { showErr(errEl, 'Điền đầy đủ thông tin'); return; }
+  // Login first to get session, then change password
+  const loginRes = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:user,password:oldPw}) });
+  const loginData = await loginRes.json();
+  if (!loginData.success) { showErr(errEl, 'Mật khẩu hiện tại sai'); return; }
+  const cpRes  = await fetch('/api/auth/change-password', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({new_password:newPw}) });
+  const cpData = await cpRes.json();
+  if (cpData.success) { okEl.classList.add('show'); document.getElementById('cp-new').value = ''; }
+  else showErr(errEl, cpData.error || 'Lỗi');
+});
+
+function showErr(el, msg) { el.textContent = msg; el.classList.add('show'); }
+</script>
+</body>
+</html>
