@@ -146,25 +146,117 @@ class WpAdminService {
       try { fs.unlinkSync(zipPath); } catch {}
     }
 
+    // Wait and verify plugin is now active — use browser cookies to avoid 406
     await new Promise(r => setTimeout(r, 2000));
-    if (!await this._isPluginActive(session)) {
+
+    // Try ping first
+    let nowActive = await this._isPluginActive(session);
+
+    // If ping fails due to hosting restrictions (406 etc), get browser cookies and retry
+    if (!nowActive) {
+      this.log('Ping failed, verifying via browser cookies...');
+      try {
+        const cookies = await this._getBrowserCookies(session);
+        const res = await this._request(session.siteUrl + '/wp-admin/admin-ajax.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json, */*',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Cookie': this._cookieHeader(cookies),
+          },
+          timeout: 15000,
+        }, 'action=wpm_ping');
+        const body = res.text().trim();
+        this.log('Plugin verify with cookies: status=' + res.status + ' body=' + body.slice(0, 80));
+        nowActive = res.status === 200 && body.includes('"success":true');
+      } catch(e) {
+        this.log('Cookie verify error: ' + e.message);
+      }
+    }
+
+    if (!nowActive) {
       throw new Error('Plugin uploaded but not responding on ' + session.siteUrl + ' — kiểm tra WP Admin > Plugins');
     }
     this.log('✓ wpm-helper installed and active on ' + session.siteUrl);
   }
 
+  async _deactivateBlockingPlugins(page, siteUrl) {
+    // Deactivate ALL active plugins temporarily before installing wpm-helper
+    // This prevents any plugin from blocking the install process
+    // They will be reactivated right after
+    try {
+      await page.goto(siteUrl + '/wp-admin/plugins.php', { waitUntil: 'networkidle2' });
+
+      const rows = await page.$$eval('tr.active[data-slug]', els => els.map(el => ({
+        slug: el.getAttribute('data-slug'),
+        href: (el.querySelector('a[href*="action=deactivate"]') || {}).href || '',
+      })));
+
+      const deactivated = [];
+      for (const row of rows) {
+        if (!row.href || row.slug === 'wpm-helper') continue;
+        await page.goto(row.href, { waitUntil: 'networkidle2' });
+        deactivated.push(row.slug);
+        this.log('Browser: deactivated: ' + row.slug);
+      }
+
+      this.log('Browser: deactivated ' + deactivated.length + ' plugins before install');
+      return deactivated;
+    } catch(e) {
+      this.log('Browser: deactivate failed: ' + e.message);
+      return [];
+    }
+  }
+
+  async _reactivatePlugins(page, siteUrl, slugs) {
+    try {
+      await page.goto(siteUrl + '/wp-admin/plugins.php', { waitUntil: 'networkidle2' });
+      for (const slug of slugs) {
+        const activateLink = await page.$('tr[data-slug="' + slug + '"] a[href*="action=activate"]');
+        if (activateLink) {
+          const href = await page.evaluate(el => el.href, activateLink);
+          await page.goto(href, { waitUntil: 'networkidle2' });
+          this.log('Browser: reactivated plugin: ' + slug);
+          await page.goto(siteUrl + '/wp-admin/plugins.php', { waitUntil: 'networkidle2' });
+        }
+      }
+    } catch(e) {
+      this.log('Browser: reactivate failed: ' + e.message);
+    }
+  }
+
   async _isPluginActive(session) {
-    // Use wpm_ping — registered as nopriv so no cookie needed
-    // This avoids SameSite cookie blocking entirely
     try {
       const res  = await this._request(session.siteUrl + '/wp-admin/admin-ajax.php', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json, text/javascript, */*; q=0.01',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
         timeout: 15000,
       }, 'action=wpm_ping');
       const body = res.text().trim();
       this.log('Plugin ping: status=' + res.status + ' body=' + body.slice(0, 80));
-      return res.status === 200 && body.includes('"success":true');
+      if (res.status === 200 && body.includes('"success":true')) return true;
+      // 406 = hosting blocks non-standard requests, try with cookie
+      if (res.status === 406 && session.cookies && Object.keys(session.cookies).length > 0) {
+        const res2 = await this._request(session.siteUrl + '/wp-admin/admin-ajax.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': '*/*',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Cookie': this._cookieHeader(session.cookies),
+          },
+          timeout: 15000,
+        }, 'action=wpm_ping');
+        const body2 = res2.text().trim();
+        this.log('Plugin ping (with cookie): status=' + res2.status + ' body=' + body2.slice(0, 80));
+        return res2.status === 200 && body2.includes('"success":true');
+      }
+      return false;
     } catch(e) {
       this.log('Plugin ping error: ' + e.message);
       return false;
@@ -203,7 +295,12 @@ class WpAdminService {
       }
       this.log('Browser: logged in, URL=' + page.url());
 
-      // ── 2. Navigate to plugin upload ──────────────────────────────────────
+      // ── 2.5: Deactivate plugins that may block upload ─────────────────────
+      // Some premium plugins block plugin uploads (e.g. security/license plugins)
+      // We temporarily deactivate them, install wpm-helper, then reactivate
+      const deactivated = await this._deactivateBlockingPlugins(page, session.siteUrl);
+
+      // ── 3. Navigate to plugin upload page ────────────────────────────────────
       await page.goto(session.siteUrl + '/wp-admin/plugin-install.php?tab=upload', { waitUntil: 'networkidle2' });
       if (page.url().includes('wp-login')) throw new Error('Redirected to login on plugin-install page');
       this.log('Browser: on plugin-install page');
@@ -226,7 +323,6 @@ class WpAdminService {
       if (html.includes('already installed') || html.includes('Plugin already installed')) {
         this.log('Plugin already installed, proceeding to activate...');
       } else if (html.includes('Installation failed') || html.includes('Plugin installation failed')) {
-        // Extract error message from various possible containers
         const errText = (
           html.match(/id="message"[^>]*>([\s\S]{0,400})<\/div>/)?.[1] ||
           html.match(/class="[^"]*error[^"]*"[^>]*>([\s\S]{0,400})<\/[^>]+>/)?.[1] ||
@@ -234,6 +330,9 @@ class WpAdminService {
           html.slice(0, 500)
         ).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300);
         throw new Error('Install failed: ' + errText);
+      } else if (!html.includes('wpm-helper') && !html.includes('action=activate')) {
+        // Unknown state — try to continue anyway
+        this.log('Browser: install result unclear, continuing...');
       }
 
       // ── 4. Activate ───────────────────────────────────────────────────────
@@ -309,6 +408,11 @@ class WpAdminService {
       }
 
       this.log('Browser: installation complete');
+
+      // Reactivate any plugins we deactivated
+      if (deactivated && deactivated.length > 0) {
+        await this._reactivatePlugins(page, session.siteUrl, deactivated);
+      }
     } finally {
       await browser.close();
     }
