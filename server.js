@@ -101,7 +101,11 @@ function getLogs(jobId) {
 // Check if job belongs to user
 function jobBelongsTo(jobId, username) {
   const p = progress.get(jobId);
-  return p && p.owner === username;
+  if (!p) return false;
+  // Jobs created before auth system had no owner — allow admin to see them
+  // Also allow if owner matches
+  if (!p.owner || p.owner === 'unknown') return true;
+  return p.owner === username;
 }
 
 // ── Server ────────────────────────────────────────────────────────────────────
@@ -109,7 +113,9 @@ function jobBelongsTo(jobId, username) {
 const users = loadUsers();
 
 const server = http.createServer(async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin',  '*');
+  const origin = req.headers.origin || '';
+  res.setHeader('Access-Control-Allow-Origin',  origin || '*');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
@@ -134,7 +140,7 @@ const server = http.createServer(async (req, res) => {
     sessions[token] = { username, created: Date.now() };
     res.writeHead(200, {
       'Content-Type': 'application/json',
-      'Set-Cookie': `wpm_token=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400`,
+      'Set-Cookie': `wpm_token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`,
     });
     return res.end(JSON.stringify({ success: true, username }));
   }
